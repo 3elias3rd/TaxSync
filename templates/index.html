@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tax Sync AI | Tax AI</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f7f6; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .chat-container { 
+            width: 100%; 
+            max-width: 600px; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            overflow: hidden; 
+        }
+        .header { 
+            background: #1e3a8a; 
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+        }
+        .header h2 { 
+            margin: 0; 
+            font-size: 24px; 
+        }
+        .header p { 
+            margin: 5px 0 0 0; 
+            font-size: 14px; 
+            opacity: 0.8; 
+        }
+        .chat-box { 
+            height: 400px; 
+            padding: 20px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            background: #fafafa; 
+        }
+        .message { 
+            max-width: 80%; 
+            padding: 12px 16px; 
+            border-radius: 8px; 
+            line-height: 1.4; 
+            font-size: 15px; 
+            word-wrap: break-word;
+        }
+        .user-msg { 
+            background: #1e3a8a; 
+            color: white; 
+            align-self: flex-end; 
+            border-bottom-right-radius: 0; 
+        }
+        .ai-msg { 
+            background: #e5e7eb; 
+            color: #111; 
+            align-self: flex-start; 
+            border-bottom-left-radius: 0; 
+        }
+        .thinking { 
+            opacity: 0.6; 
+            font-style: italic; 
+        }
+        .error-msg {
+            background: #fee;
+            color: #c00;
+            border: 1px solid #fcc;
+        }
+        .input-area { 
+            display: flex; 
+            border-top: 1px solid #ddd; 
+        }
+        input[type="text"] { 
+            flex: 1; 
+            padding: 15px; 
+            border: none; 
+            outline: none; 
+            font-size: 16px; 
+        }
+        button { 
+            padding: 15px 25px; 
+            background: #1e3a8a; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 16px; 
+            transition: background 0.2s; 
+        }
+        button:hover { 
+            background: #152c6b; 
+        }
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="header">
+        <h2>Tax Sync AI</h2>
+        <p>UAE Corporate Tax AI Advisor</p>
+    </div>
+    
+    <div class="chat-box" id="chatBox">
+        <div class="message ai-msg">Hello! I am the Tax Sync's Tax AI. Ask me any question about the 2026 UAE Corporate Tax Law.</div>
+    </div>
+    
+    <div class="input-area">
+        <input 
+            type="text" 
+            id="userInput" 
+            placeholder="e.g., How much tax do I pay on 400k profit?" 
+            onkeypress="handleKeyPress(event)"
+        >
+        <button id="sendButton" onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    const chatBox = document.getElementById("chatBox");
+    const inputField = document.getElementById("userInput");
+    const sendButton = document.getElementById("sendButton");
+
+    // Helper function to add messages to chat
+    function addMessage(text, type) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${type}`;
+        msgDiv.textContent = text;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return msgDiv;
+    }
+
+    // Helper function to add HTML message (for formatting)
+    function addHTMLMessage(html, type) {
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `message ${type}`;
+        msgDiv.innerHTML = html;
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return msgDiv;
+    }
+
+    // Main function to send message
+    async function sendMessage() {
+        const question = inputField.value.trim();
+
+        if (!question) return; // Don't send empty messages
+
+        // Disable input while processing
+        inputField.disabled = true;
+        sendButton.disabled = true;
+
+        // 1. Display user's message
+        addMessage(question, "user-msg");
+
+        // 2. Clear input field
+        inputField.value = "";
+
+        // 3. Show "Thinking..." message
+        const thinkingMsg = addMessage("Thinking...", "ai-msg thinking");
+
+        try {
+            // 4. Call FastAPI backend
+            const response = await fetch(`/ask-tax-advisor?question=${encodeURIComponent(question)}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+
+            // 5. Remove "Thinking..." message
+            thinkingMsg.remove();
+
+            // 6. Display AI response
+            const aiText = data.answer || "Sorry, I received an empty response.";
+            addMessage(aiText, "ai-msg");
+
+        } catch (error) {
+            // 7. Error handling
+            console.error("Error:", error);
+            thinkingMsg.remove();
+            addMessage(`Error: Could not reach the server. ${error.message}`, "ai-msg error-msg");
+        } finally {
+            // 8. Re-enable input
+            inputField.disabled = false;
+            sendButton.disabled = false;
+            inputField.focus();
+        }
+    }
+
+    // Allow pressing "Enter" to send
+    function handleKeyPress(event) {
+        if (event.key === "Enter" && !inputField.disabled) {
+            sendMessage();
+        }
+    }
+
+    // Focus input on load
+    window.addEventListener("load", () => {
+        inputField.focus();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "labels":[
+    "client_entertainment",
+    "rent_and_utilities",
+    "salaries_and_visas",
+    "marketing_and_ads",
+    "fines_and_penalties"
+  ],
+  "threshold":0.0,
+  "positive_label":null
+}
