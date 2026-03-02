@@ -24,4 +24,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Run app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "2", "main:app", "-b", "0.0.0.0:8000"]

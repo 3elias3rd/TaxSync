@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from models import DocumentKnowledge
 
 
-client = OpenAI(api_key=os.getenv("SECRET_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_embedding(text: str):
     # Clean the text to ensure newlines don't confuse the model
