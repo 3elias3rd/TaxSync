@@ -89,8 +89,11 @@ class DocumentKnowledge(Base):
 
 def create_tables():
     with engine.connect() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-        conn.commit()
+        try:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            conn.commit()
+        except Exception:
+            conn.rollback()
 
     Base.metadata.create_all(engine)  
 
