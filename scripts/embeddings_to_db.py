@@ -26,26 +26,29 @@ def get_overalpping_chunks(text: str, chunk_size, overlap):
     
     return chunks
 
-def set_law_to_db(db: Session):
-    chunks = get_overalpping_chunks(text=tax_law, chunk_size=1000, overlap=200) 
+def set_law_to_db():
+    db = SessionLocal()
+    try:
+        chunks = get_overalpping_chunks(text=tax_law, chunk_size=1000, overlap=200) 
 
-    new_entries = []
+        new_entries = []
 
-    for i, piece in enumerate(chunks):
-        
-        vector = get_embedding(text=piece)
+        for i, piece in enumerate(chunks):
+            
+            vector = get_embedding(text=piece)
 
-        # Create a new row in document knowledge table
-        new_entries.append(
-            DocumentKnowledge(
-                document_name="UAE_Tax_Law_2026",
-                page_number=1,
-                text=piece,
-                embedding=vector
+            # Create a new row in document knowledge table
+            new_entries.append(
+                DocumentKnowledge(
+                    document_name="UAE_Tax_Law_2026",
+                    page_number=1,
+                    text=piece,
+                    embedding=vector
+                    )
                 )
-            )
-        
+            
         db.bulk_save_objects(new_entries)
         db.commit()
-
-        return {"inserted": len(new_entries)}
+    
+    finally:
+        db.close()

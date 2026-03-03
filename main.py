@@ -15,6 +15,7 @@ from models import Expense, Category, Income, get_db
 from services.tax_engine import calculate_corporate_tax
 from services.ai_services import get_relevant_chunks, generate_answer
 from scripts.embeddings_to_db import set_law_to_db
+from scripts.tax_law import tax_law
 
 import spacy
 from spacy.language import Language
@@ -106,6 +107,6 @@ async def ask_advisor(question: str, db: Session = Depends(get_db)):
     return {"answer": answer}
 
 @app.post("/append-law")
-def append_law(db: Session = Depends(get_db)):
-    BackgroundTasks.add_task(set_law_to_db)
+def append_law(background_task: BackgroundTasks):
+    background_task.add_task(set_law_to_db)
     return {"status": "process starting"}
