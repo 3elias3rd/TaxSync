@@ -1,5 +1,6 @@
 import spacy
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from scripts.tax_law import tax_law
 from models import DocumentKnowledge, SessionLocal
@@ -25,34 +26,26 @@ def get_overalpping_chunks(text: str, chunk_size, overlap):
     
     return chunks
 
-def set_law_to_db():
+def set_law_to_db(db: Session):
     chunks = get_overalpping_chunks(text=tax_law, chunk_size=1000, overlap=200) 
-    db = SessionLocal()
+
+    new_entries = []
 
     for i, piece in enumerate(chunks):
         
+        vector = get_embedding(text=piece)
 
-        # Check if embedding exists
-        existing = db.query(DocumentKnowledge).filter(DocumentKnowledge.text == piece).first()
-
-        if not existing:
-            print(f"Now processing chunk {i + 1}")
-
-            # Create vector for piece of text
-            vector = get_embedding(text=piece)
-
-            # Create a new row in document knowledge table
-            new_entry = DocumentKnowledge(document_name="UAE_Tax_Law_2026", page_number=1, text=piece, embedding=vector)
-            
-            db.add(new_entry)
-            db.commit()
-            print(f"Saved chunk {i}")
+        # Create a new row in document knowledge table
+        new_entries.append(
+            DocumentKnowledge(
+                document_name="UAE_Tax_Law_2026",
+                page_number=1,
+                text=piece,
+                embedding=vector
+                )
+            )
         
-        else:
-            print(f"Skipping chunk {i}. Already exist.")
+        db.bulk_save_objects(new_entries)
+        db.commit()
 
-    db.close()
-
-            
-set_law_to_db()
-
+        return {"inserted": len(new_entries)}

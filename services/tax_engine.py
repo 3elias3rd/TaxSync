@@ -1,6 +1,7 @@
-from models import  Category, Expense, Income, select
+from models import  Category, Expense, Income
 
-from sqlalchemy import  func, extract
+from sqlalchemy import func, extract, select
+from sqlalchemy.orm import Session
 
 from schemas import Report
 
@@ -14,7 +15,7 @@ if not DATABASE_URL:
     raise ValueError("Database Url not found in .env")
 
 
-def calculate_corporate_tax(year, db) -> Report:
+def calculate_corporate_tax(year, db: Session) -> Report:
 
     total_revenue = 0.0
     total_expenses = 0.0

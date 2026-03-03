@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from models import Expense, Category, Income, get_db
 from services.tax_engine import calculate_corporate_tax
 from services.ai_services import get_relevant_chunks, generate_answer
+from scripts.embeddings_to_db import set_law_to_db
 
 import spacy
 from spacy.language import Language
@@ -103,3 +104,8 @@ async def ask_advisor(question: str, db: Session = Depends(get_db)):
     answer = generate_answer(question=question, context=context_text)
 
     return {"answer": answer}
+
+@app.post("/append-law")
+def append_law(db: Session = Depends(get_db)):
+    BackgroundTasks.add_task(set_law_to_db)
+    return {"status": "process starting"}

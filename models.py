@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime, String, ForeignKey, Float, Integer, Text, create_engine, select, text
+from sqlalchemy import DateTime, String, ForeignKey, Float, Integer, Text, create_engine, UniqueConstraint
 from pgvector.sqlalchemy import Vector
 from datetime import datetime
 from sqlalchemy.sql import func
@@ -79,25 +79,16 @@ class Income(Base):
 
 class DocumentKnowledge(Base):
     __tablename__ = "document_knowledge"
+    __table_args__= (
+        UniqueConstraint(
+            "document_name",
+            "text",
+            name="uq_document_text"),
+        )
     text_id: Mapped[int] = mapped_column(primary_key=True)
-    document_name: Mapped[str] = mapped_column(String(300))
-    page_number: Mapped[int] = mapped_column(Integer)
-    text: Mapped[str] = mapped_column(Text)
+    document_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
 
     # 1536 is the dimension for OpenAI text-embedding
-    embedding: Mapped[Vector] = mapped_column(Vector(1536))
-
-def create_tables():
-    with engine.connect() as conn:
-        try:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-            conn.commit()
-        except Exception:
-            conn.rollback()
-
-    Base.metadata.create_all(engine)  
-
-    print("All tables created.")  
-    
-
-create_tables()
+    embedding: Mapped[Vector] = mapped_column(Vector(1536), nullable=False)

@@ -24,4 +24,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Run app
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "2", "main:app", "-b", "0.0.0.0:8000"]
+CMD sh -c "alembic upgrade head && gunicorn -k uvicorn.workers.UvicornWorker -w 2 main:app -b 0.0.0.0:8000"
