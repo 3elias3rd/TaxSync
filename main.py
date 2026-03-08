@@ -51,6 +51,7 @@ def get_nlp(request: Request):
 def add_expense(expense: ExpenseCreate, nlp: Language = Depends(get_nlp), db: Session = Depends(get_db)):
 
     new_expense = Expense(**expense.model_dump())
+    new_expense.user_id = 1
     
     # Check if user entered category id
     if not new_expense.category_id:

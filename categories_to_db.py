@@ -4,28 +4,30 @@ from models import SessionLocal
 db = SessionLocal()
 
 def seed_categories():
-    categories = [
-        Category(
-        name="client_entertainment",
-        deductible_pct=0.5
-        ),
-        Category(
-        name="rent_and_utilities",
-        deductible_pct=1.0
-        ),
-        Category(
-        name="marketing_and_ads",
-        deductible_pct=1.0
-        ),
-        Category(
-        name="salaries_and_visas",
-        deductible_pct=1.0
-        ),
-        Category(
-        name="fines_and_penalties",
-        deductible_pct=0
-        )
-    ]
+    if db.query(Category).count() == 0:
+
+        categories = [
+            Category(
+            name="client_entertainment",
+            deductible_pct=0.5
+            ),
+            Category(
+            name="rent_and_utilities",
+            deductible_pct=1.0
+            ),
+            Category(
+            name="marketing_and_ads",
+            deductible_pct=1.0
+            ),
+            Category(
+            name="salaries_and_visas",
+            deductible_pct=1.0
+            ),
+            Category(
+            name="fines_and_penalties",
+            deductible_pct=0
+            )
+        ]
 
     db.add_all(categories)
     db.commit()
