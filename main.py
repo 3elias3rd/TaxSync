@@ -7,6 +7,7 @@ from pathlib import Path
 
 from schemas import CreateIncome, ExpenseCreate, IncomeResponse, ExpenseResponse, Report
 from train import MODEL_DIR
+from categories_to_db import seed_categories
 
 from sqlalchemy import select, exists
 from sqlalchemy.orm import Session
@@ -110,3 +111,7 @@ async def ask_advisor(question: str, db: Session = Depends(get_db)):
 def append_law(background_task: BackgroundTasks):
     background_task.add_task(set_law_to_db)
     return {"status": "process starting"}
+
+@app.post("/seed_categories")
+def seed_categories_to_db():
+    return seed_categories()
