@@ -84,6 +84,8 @@ def add_expense(expense: ExpenseCreate, nlp: Language = Depends(get_nlp), db: Se
 @app.post("/income", response_model=IncomeResponse)
 def add_income(income: CreateIncome, db: Session = Depends(get_db)):
     new_income = Income(**income.model_dump())
+    new_income.user_id = 1
+    
     db.add(new_income)
     db.commit()
 
