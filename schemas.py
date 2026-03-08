@@ -69,6 +69,8 @@ class ExpensesBase(BaseModel):
     @field_validator('date')
     @classmethod
     def validate_date_not_future(cls, value):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
         if value > datetime.now(timezone.utc):
             raise ValueError("The date of the expense cannot be in the future")
         return value
@@ -86,7 +88,7 @@ class ExpenseUpdate(BaseModel):
 
 class ExpenseResponse(ExpensesBase):
     id: int
-    date: datetime 
+    date: datetime = datetime.now(timezone.utc)
     category: CategoryResponse
 
     model_config = ConfigDict(from_attributes=True)

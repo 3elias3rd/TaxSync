@@ -29,11 +29,11 @@ def seed_categories():
             )
         ]
 
-    db.add_all(categories)
-    db.commit()
-    db.close()
+        db.add_all(categories)
+        db.commit()
+        db.close()
 
-    return {"status": "Categories successfuly seeded"}
+        return {"status": "Categories successfuly seeded"}
 
-if db.query(Category).count() == 0:
-    seed_categories()
+    else:
+        return {"status": "Categories already seeded"}
