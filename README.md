@@ -1,5 +1,8 @@
 TaxSync API: Automated Financial Ledger Integration
 
+Link to API: https://taxsync.onrender.com/docs#/
+Link to youtube demo: https://youtu.be/8bOVD1PNnQY
+
 Tax sync was built to help SMEs within the UAE track and synchronise their tax liabilities under corporate tax rules. It allows a business to maintain strict financial consistency and transactional integrity.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
