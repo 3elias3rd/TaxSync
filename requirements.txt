@@ -11,3 +11,6 @@ pgvector
 openai
 jinja2
 alembic
+python-jose[cryptography]
+pwdlib
+passlib

@@ -2,7 +2,11 @@ from pydantic import BaseModel, Field, ConfigDict, computed_field, field_validat
 from datetime import datetime, timezone
 from typing import Optional, List
 
-
+# Request body model for registration
+class UserRegister(BaseModel):
+    username: str
+    password: str
+    trn_number: Optional[str] = Field(pattern=r"^\d{15}$", default=None)
 
 # User related models
 class UserBase(BaseModel):
