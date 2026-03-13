@@ -5,8 +5,16 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from models import User, get_db
+import os
+from dotenv import load_dotenv
 
-SECRET_KEY = "my-secret-to-keep-safe"
+load_dotenv(".env")
+
+
+AUTH_SYGNATURE = os.getenv("AUTH_SYGNATURE")
+if not AUTH_SYGNATURE:
+    raise ValueError("AUTH_SYGNATURE not found in .env")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -28,14 +36,14 @@ def create_access_token(username: str) -> str:
         "sub": username,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)}
     
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(payload, AUTH_SYGNATURE, algorithm=ALGORITHM)
 
     return token
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
-        # Verify signature
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # Verify sygnature
+        payload = jwt.decode(token, AUTH_SYGNATURE, algorithms=[ALGORITHM])
         username = payload.get("sub") # Extract sub claim
 
         if username is None: 
@@ -48,6 +56,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(User).filter(User.username == username).first()
 
     if user is None:
-        raise HTTPException(status_code="401", detail="User not found")
+        raise HTTPException(status_code=401, detail="User not found")
     
     return user

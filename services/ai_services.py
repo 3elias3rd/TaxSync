@@ -1,10 +1,19 @@
 import os
 from openai import OpenAI
 from sqlalchemy.orm import Session
-from models import DocumentKnowledge
+from sqlalchemy import select
+from models import DocumentKnowledge, Category
+from fastapi import HTTPException, Request
+from pathlib import Path
+from spacy.language import Language
+
+MODEL_DIR = Path("model")/"tax_intent_cat"
 
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def get_nlp(request: Request):
+    return request.app.state.nlp
 
 def get_embedding(text: str):
     # Clean the text to ensure newlines don't confuse the model
@@ -37,3 +46,17 @@ def generate_answer(question: str, context):
         ])   
         
     return response.choices[0].message.content
+
+def get_category_id(text, nlp: Language, db: Session) -> int:
+    doc = nlp(text)
+    cats = doc.cats
+    top_tabel = max(cats, key=cats.get)
+        
+    category_obj = db.scalar(select(Category).where(Category.name==top_tabel))
+
+    if not category_obj:
+            raise HTTPException(status_code=400, detail=f"AI predicted {top_tabel}, this label is not in DB")
+
+    category_id = category_obj.id
+
+    return category_id

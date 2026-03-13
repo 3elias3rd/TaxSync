@@ -10,7 +10,9 @@ services:
       - .env 
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-  
+    volumes:
+      - ./migrations:/app/migrations # Mounts local migrations folder into container
+
   db:
     image: ankane/pgvector:v0.5.1
     restart: always

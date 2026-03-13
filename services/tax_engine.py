@@ -15,7 +15,7 @@ if not DATABASE_URL:
     raise ValueError("Database Url not found in .env")
 
 
-def calculate_corporate_tax(year, db: Session) -> Report:
+def calculate_corporate_tax(year, company_id: int, db: Session) -> Report:
 
     total_revenue = 0.0
     total_expenses = 0.0
@@ -23,10 +23,10 @@ def calculate_corporate_tax(year, db: Session) -> Report:
     
     # Add each income object to get total revenue filtered by year
     total_revenue = db.scalar(
-        select(func.sum(Income.amount)).where(extract('year', Income.date) == year)
+        select(func.sum(Income.amount)).where(Income.company_id==company_id, extract('year', Income.date) == year)
         ) or 0.0
             
-    stmt = select(Expense, Category).join(Expense.category).where(extract('year', Expense.date) == year)
+    stmt = select(Expense, Category).join(Expense.category).where(Expense.company_id==company_id, extract('year', Expense.date) == year)
     for row in db.execute(stmt):
         expense_obj = row.Expense
         category_obj = row.Category

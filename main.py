@@ -1,30 +1,25 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordRequestForm
+from routers import expenses, incomes, users
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
 
-from schemas import CreateIncome, ExpenseCreate, IncomeResponse, ExpenseResponse, Report, UserRegister
+from schemas import Report, UserRegister
 from train import MODEL_DIR
 from categories_to_db import seed_categories
 
-from sqlalchemy import select, exists
 from sqlalchemy.orm import Session
 
-from models import Expense, Category, Income, get_db, User
+from models import get_db, User
 from services.tax_engine import calculate_corporate_tax
-from auth import verify_password, create_access_token, get_current_user, hash_password, oauth2_scheme
+from auth import verify_password, create_access_token, get_current_user, hash_password
 from services.ai_services import get_relevant_chunks, generate_answer
 from scripts.embeddings_to_db import set_law_to_db
-from scripts.tax_law import tax_law
 
 import spacy
-from spacy.language import Language
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,14 +27,17 @@ async def lifespan(app: FastAPI):
         # Load the model from disk
         app.state.nlp = spacy.load(MODEL_DIR)
     
-    except Exception:
-        print(f"Failed to load model: {Exception}")
+    except Exception as e:
+        print(f"Failed to load model: {e}")
     
     yield
-    print("Shuting down API")
+    print("Shutting down API")
 
 app = FastAPI(lifespan=lifespan)
 
+app.include_router(expenses.router)
+app.include_router(incomes.router)
+app.include_router(users.router )
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -59,7 +57,9 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     new_user =User(
         username = user_data.username,
         hashed_pass = hash_password(user_data.password),
-        trn_number = user_data.trn_number
+        trn_number = user_data.trn_number,
+        company_id = user_data.company_id,
+        role = user_data.role # Defaults to employee
     )
     
     db.add(new_user)
@@ -81,66 +81,13 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     
     return {"access_token": token, "token_type": "bearer"}
 
-@app.get("/users/me")
-def read_me(current_user: User = Depends(get_current_user)):  
-    return {
-        "id": current_user.id,
-        "username": current_user.username
-    }
-
-def get_nlp(request: Request):
-
-    return request.app.state.nlp
-
-@app.post("/expense",response_model=ExpenseResponse)
-def add_expense(expense: ExpenseCreate, nlp: Language = Depends(get_nlp), db: Session = Depends(get_db)):
-
-    new_expense = Expense(**expense.model_dump())
-    new_expense.user_id = 1
-    
-    # Check if user entered category id
-    if not new_expense.category_id:
-        doc = nlp(expense.description)
-        cats = doc.cats
-        top_tabel = max(cats, key=cats.get)
-        
-        category_obj = db.scalar(select(Category).where(Category.name==top_tabel))
-
-        if not category_obj:
-            raise HTTPException(status_code=400, detail=f"AI predicted {top_tabel}, this label is not in DB")
-
-        new_expense.category_id = category_obj.id
-
-        # new_expense = Expense(**expense_data)   
-
-    existing = db.scalar(select(exists(select(Category).where(Category.id==new_expense.category_id))))
-    if not existing:
-        raise HTTPException(status_code=404, detail="Category does not exist")
-
-    # Add new expense
-    db.add(new_expense)
-
-    db.commit()
-
-    db.refresh(new_expense, ["category"])
-
-    return new_expense
-
-@app.post("/income", response_model=IncomeResponse)
-def add_income(income: CreateIncome, db: Session = Depends(get_db)):
-    new_income = Income(**income.model_dump())
-    new_income.user_id = 1
-    
-    db.add(new_income)
-    db.commit()
-
-    db.refresh(new_income)
-
-    return new_income
-
 @app.get("/final_report", response_model=Report)
-def get_report(year: int = 2026, db: Session = Depends(get_db)):
-    report_data = calculate_corporate_tax(year, db)
+def get_report(
+    year: int = 2026,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)):
+
+    report_data = calculate_corporate_tax(year=year, company_id=current_user.company_id, db=db)
 
     return report_data
 

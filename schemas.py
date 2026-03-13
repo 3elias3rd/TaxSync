@@ -1,14 +1,12 @@
 from pydantic import BaseModel, Field, ConfigDict, computed_field, field_validator
 from datetime import datetime, timezone
 from typing import Optional, List
+from models import RoleEnum
 
-# Request body model for registration
-class UserRegister(BaseModel):
-    username: str
-    password: str
-    trn_number: Optional[str] = Field(pattern=r"^\d{15}$", default=None)
-
+# --------------------------------------------
 # User related models
+# --------------------------------------------
+
 class UserBase(BaseModel):
     username: str = Field(...,min_length=3, max_length=50)
     trn_number: Optional[str] = Field(pattern=r"^\d{15}$", default=None)
@@ -18,8 +16,16 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=20)
 
 
+# Request body model for registration
+class UserRegister(UserCreate):
+    company_id: int
+    role: RoleEnum = RoleEnum.employee # Role wil default to employee
+
+
 class UserResponse(UserBase):
     id: int
+    company_id: int
+    role: RoleEnum
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,13 +37,17 @@ class UserUpdate(BaseModel):
 
 
 class UserWithExpense(UserResponse):
-    expense: List["ExpenseResponse"] = []
+    expenses: List["ExpenseResponse"] = []
 
 
 class UserWithIncome(UserResponse):
-    income: List["IncomeResponse"] = []
+    incomes: List["IncomeResponse"] = []
 
-# Category related models
+
+# --------------------------------------------
+# Category related schemas
+# --------------------------------------------
+
 class CategoryBase(BaseModel):
     name: str = Field(min_length=3, max_length=50)
     deductible_pct: float = Field(ge=0, le=1, default=1.0)
@@ -55,7 +65,7 @@ class CategoryResponse(CategoryBase):
 
 class CategoryUpdate(BaseModel):
     name: Optional[str] = Field(min_length=3, max_length=50, default=None)
-    deductible_pct: Optional[float] = Field(ge=0.0, le=1.0, default=1.0)
+    deductible_pct: Optional[float] = Field(ge=0.0, le=1.0, default=None)
 
 
 class CategoryWithExpense(CategoryResponse):
@@ -63,12 +73,16 @@ class CategoryWithExpense(CategoryResponse):
     expenses: List["ExpenseResponse"] = []
 
 
-# Expense related models
+# --------------------------------------------
+# Expense related schemas
+# --------------------------------------------
+
 class ExpensesBase(BaseModel):
     description: str = Field(..., max_length=50)
     amount: float = Field(..., gt=0 )
-    category_id: Optional[int]
-    date: datetime = datetime.now(timezone.utc)
+    category_id: Optional[int] = None
+
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator('date')
     @classmethod
@@ -87,13 +101,15 @@ class ExpenseCreate(ExpensesBase):
 class ExpenseUpdate(BaseModel):
     description: Optional[str] = Field(max_length=50, default=None)
     amount: Optional[float] = Field(gt=0, default=None)
-    category_id: int
+    category_id: Optional[int] = None
 
 
 class ExpenseResponse(ExpensesBase):
     id: int
-    date: datetime = datetime.now(timezone.utc)
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     category: CategoryResponse
+    company_id: int
+    is_approved: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -105,7 +121,10 @@ class ExpenseResponse(ExpensesBase):
         return round(self.category.deductible_pct * self.amount, 2)
 
 
+# --------------------------------------------
 # Income related models
+# --------------------------------------------
+
 class IncomeBase(BaseModel):
     description: str = Field(..., max_length=50)
     amount: float = Field(..., gt=0)
@@ -114,6 +133,7 @@ class IncomeBase(BaseModel):
 class CreateIncome(IncomeBase):
     pass
 
+
 class UpdateIncome(BaseModel):
     description: Optional[str] = Field(default=None, max_length=50)
     amount: Optional[float] = Field(default=None, gt=0)
@@ -121,8 +141,14 @@ class UpdateIncome(BaseModel):
 
 class IncomeResponse(IncomeBase):
     id: int
-
+    company_id: int
+    is_approved: bool
     model_config = ConfigDict(from_attributes=True)
+    
+
+# --------------------------------------------
+# Report related schema
+# --------------------------------------------
 
 class Report(BaseModel):
     period: int
