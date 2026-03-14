@@ -78,7 +78,7 @@ class CategoryWithExpense(CategoryResponse):
 # --------------------------------------------
 
 class ExpensesBase(BaseModel):
-    description: str = Field(..., max_length=50)
+    description: str = Field(..., max_length=100)
     amount: float = Field(..., gt=0 )
     category_id: Optional[int] = None
 
@@ -99,7 +99,7 @@ class ExpenseCreate(ExpensesBase):
 
 
 class ExpenseUpdate(BaseModel):
-    description: Optional[str] = Field(max_length=50, default=None)
+    description: Optional[str] = Field(max_length=100, default=None)
     amount: Optional[float] = Field(gt=0, default=None)
     category_id: Optional[int] = None
 
@@ -135,7 +135,7 @@ class CreateIncome(IncomeBase):
 
 
 class UpdateIncome(BaseModel):
-    description: Optional[str] = Field(default=None, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=100)
     amount: Optional[float] = Field(default=None, gt=0)
 
 

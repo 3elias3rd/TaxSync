@@ -63,10 +63,10 @@ class User(Base):
 class Expense(Base):
     __tablename__ = "expenses"
     id: Mapped[int] = mapped_column(primary_key=True)
-    description: Mapped[str] = mapped_column(String(50))
+    description: Mapped[str] = mapped_column(String(100))
     amount: Mapped[float]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True),server_default=func.now(), nullable=False)
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Foreign keys
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
@@ -95,7 +95,7 @@ class Income(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     description: Mapped[str] = mapped_column(String(100))
     amount: Mapped[float]
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Foreign keys
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))

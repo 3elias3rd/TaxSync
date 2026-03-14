@@ -1,6 +1,5 @@
 import spacy
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 
 from scripts.tax_law import tax_law
 from models import DocumentKnowledge, SessionLocal
