@@ -11,9 +11,9 @@ from dotenv import load_dotenv
 load_dotenv(".env")
 
 
-AUTH_SYGNATURE = os.getenv("AUTH_SYGNATURE")
-if not AUTH_SYGNATURE:
-    raise ValueError("AUTH_SYGNATURE not found in .env")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY not found in .env")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -36,14 +36,14 @@ def create_access_token(username: str) -> str:
         "sub": username,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)}
     
-    token = jwt.encode(payload, AUTH_SYGNATURE, algorithm=ALGORITHM)
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
     return token
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         # Verify sygnature
-        payload = jwt.decode(token, AUTH_SYGNATURE, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub") # Extract sub claim
 
         if username is None: 
