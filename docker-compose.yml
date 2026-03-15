@@ -12,6 +12,7 @@ services:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
     volumes:
       - ./migrations:/app/migrations # Mounts local migrations folder into container
+      - ./tests:/app/tests
 
   db:
     image: ankane/pgvector:v0.5.1
@@ -26,6 +27,21 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 35s
+      retries: 5
+
+  db_test: # separate database for running tests
+    image: ankane/pgvector:v0.5.1
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: test_db
+    ports:
+      - "5434:5432" #  different port to avoid conflict with main db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 5s

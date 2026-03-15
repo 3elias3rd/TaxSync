@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.openapi.utils import get_openapi
+
 from routers import expenses, incomes, users
 
 from contextlib import asynccontextmanager
@@ -33,8 +35,33 @@ async def lifespan(app: FastAPI):
     yield
     print("Shutting down API")
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan = lifespan,
+    title = "TaxSync API",
+    description = """
+## TaxSync API
 
+A multi-tenant tax management API for UAE businesses.
+
+### Features
+- JWT Authentication with role-based access control
+- Multi-tenant company isolation
+- Expense and income tracking with AI categorisation
+- Corporate tax reporting
+- AI-powered tax advisor
+""",
+    version      = "1.0.0",
+    contact      = {
+        "name": "TaxSync Support",
+        "email": "support@taxsync.com"
+    },
+    license_info = {
+        "name": "Private"
+    },
+    # ✅ Swagger UI at /docs, disable ReDoc
+    docs_url     = "/docs",
+    redoc_url    = None
+)
 app.include_router(expenses.router)
 app.include_router(incomes.router)
 app.include_router(users.router )

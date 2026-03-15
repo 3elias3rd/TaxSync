@@ -31,6 +31,7 @@ def create_expense(
     nlp: Language = Depends(get_nlp),
     db: Session = Depends(get_db)
 ):
+    category_id = expense_data.category_id or get_category_id(expense_data.description, nlp, db)
 
     new_expense = Expense(
         amount = expense_data.amount,
@@ -39,7 +40,7 @@ def create_expense(
         created_by = current_user.id,
         
         # Use spacy model to extract category id
-        category_id = get_category_id(expense_data.description, nlp=nlp)
+        category_id = category_id
     )
 
     db.add(new_expense)
