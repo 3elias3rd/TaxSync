@@ -48,7 +48,7 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
-    hashed_pass: Mapped[str] = mapped_column(String(255))
+    hashed_pass: Mapped[str] = mapped_column(String(500))
     trn_number: Mapped[Optional[str]] = mapped_column(String(15), unique=True)
     
     # Foreign key
@@ -84,7 +84,7 @@ class Expense(Base):
 class Category(Base):
     __tablename__ = "categories"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(50))
+    name: Mapped[str] = mapped_column(String(100))
     deductible_pct: Mapped[float] = mapped_column(Float, default=1.0)
 
     # Relationship

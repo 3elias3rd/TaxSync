@@ -1,15 +1,22 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from sqlalchemy.orm import Session
 from fastapi import Request
 from models import get_db, Company, User, Expense, Income
 from auth import hash_password
 from services.ai_services import get_category_id, get_nlp
 import random
-from scripts.seed_data import company_data, user_data, zereebcorp_expenses, zereebcorp_incomes, tilemllc_expenses, tilemllc_incomes, timule_expenses, timule_incomes
+from seed_data import company_data, user_data, zereebcorp_expenses, zereebcorp_incomes, tilemllc_expenses, tilemllc_incomes, timule_expenses, timule_incomes
 from train import MODEL_DIR
 import spacy
 from datetime import date, timedelta
 import random
+import sys
+import os
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 nlp = spacy.load(MODEL_DIR)
