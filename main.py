@@ -2,7 +2,6 @@ from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.openapi.utils import get_openapi
 
 from routers import expenses, incomes, users
 
@@ -11,7 +10,7 @@ from pathlib import Path
 
 from schemas import Report, UserRegister
 from train import MODEL_DIR
-from categories_to_db import seed_categories
+from scripts.seed_categories import seed_categories
 
 from sqlalchemy.orm import Session
 

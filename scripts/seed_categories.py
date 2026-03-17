@@ -1,6 +1,10 @@
 from models import Category
 from models import SessionLocal
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 db = SessionLocal()
 
 def seed_categories():
