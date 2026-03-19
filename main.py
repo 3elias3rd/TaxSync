@@ -1,7 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from routers import expenses, incomes, users
 
@@ -22,15 +26,17 @@ from scripts.embeddings_to_db import set_law_to_db
 
 import spacy
 
+limiter = Limiter(key_func=get_remote_address)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         # Load the model from disk
         app.state.nlp = spacy.load(MODEL_DIR)
+        app.state.limiter = limiter
     
     except Exception as e:
         print(f"Failed to load model: {e}")
-    
     yield
     print("Shutting down API")
 
@@ -72,8 +78,21 @@ def serve_homepage(request: Request):
     # Load index.html and send it to the browser
     return templates.TemplateResponse("index.html", {"request": request})
 
+# Rate limit exeeded handler
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code= 429,
+        content={"detail": "Too many requests - please try again in a minute"}
+    )
+
 @app.post("/register")
-def register(user_data: UserRegister, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def register(
+    request: Request,
+    user_data: UserRegister,
+    db: Session = Depends(get_db)
+    ):
     # Check if username is avalable
     existing = db.query(User).filter(User.username == user_data.username).first()
     if existing:
@@ -95,7 +114,12 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     return {"message": f"User {new_user.username} registered successfully"}
 
 @app.post("/token")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
 
     # Check if user exists
     # If user exists then check password

@@ -10,6 +10,13 @@ company_data = [
 # --------------------------------------------
 # User data
 # --------------------------------------------
+demo_user = {   
+        "username": "demo_employee",
+        "password": "demopass",
+        "company": "TilemLLC",
+        "role": "employee"
+    }
+
 user_data = [
     {   
         "username": "tinashe",

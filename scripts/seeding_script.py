@@ -3,12 +3,11 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.orm import Session
-from fastapi import Request
 from models import get_db, Company, User, Expense, Income
 from auth import hash_password
-from services.ai_services import get_category_id, get_nlp
+from services.ai_services import get_category_id
 import random
-from seed_data import company_data, user_data, zereebcorp_expenses, zereebcorp_incomes, tilemllc_expenses, tilemllc_incomes, timule_expenses, timule_incomes
+from seed_data import company_data, user_data, demo_user, zereebcorp_expenses, zereebcorp_incomes, tilemllc_expenses, tilemllc_incomes, timule_expenses, timule_incomes
 from train import MODEL_DIR
 import spacy
 from datetime import date, timedelta
@@ -41,6 +40,7 @@ def seed_users(db: Session):
         company = db.query(Company).filter(Company.name == user["company"]).first()
         
         exists = db.query(User).filter(User.username == user["username"], User.company_id == company.id).first()
+        demo_acc = db.query(User).filter(User.username == demo_user["username"]).first()
 
         if not exists:
             new_user = User(
@@ -52,6 +52,15 @@ def seed_users(db: Session):
             )
 
             db.add(new_user)
+    demo_user_company = db.query(Company).filter(Company.name == demo_user["company"]).first()
+    if not demo_acc:
+        add_demo = User(
+            username = demo_user["username"],
+            hashed_pass = hash_password(demo_user["password"]),
+            company_id = demo_user_company.id,
+            role = demo_user["role"]
+        )
+    db.add(add_demo)
     
 
 # --------------------------------------------

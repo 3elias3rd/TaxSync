@@ -1,6 +1,20 @@
 # TaxSync API
 ### Automated Multi-Tenant Financial Ledger & Tax Compliance Engine for UAE SMEs
 
+## Demo Access
+
+A read-only demo account is available to explore the API:
+
+| Field    | Value           |
+|----------|-----------------|
+| username | demo_employee   |
+| password | TaxSync2026!    |
+| role     | employee        |
+
+> Note: The demo account can view expenses, incomes and tax reports
+> but cannot create, approve or delete any records.
+> Login attempts are rate limited to 5 per minute.
+
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat&logo=postgresql)](https://postgresql.org)

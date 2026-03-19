@@ -79,7 +79,7 @@ class CategoryWithExpense(CategoryResponse):
 
 class ExpensesBase(BaseModel):
     description: str = Field(..., max_length=100)
-    amount: float = Field(..., gt=0 )
+    amount: float = Field(..., gt=0)
     category_id: Optional[int] = None
 
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -95,12 +95,12 @@ class ExpensesBase(BaseModel):
 
 
 class ExpenseCreate(ExpensesBase):
-    pass
+    amount: float = Field(..., gt=0, le=50000 )
 
 
 class ExpenseUpdate(BaseModel):
     description: Optional[str] = Field(max_length=100, default=None)
-    amount: Optional[float] = Field(gt=0, default=None)
+    amount: Optional[float] = Field(gt=0, default=None, le=50000)
     category_id: Optional[int] = None
 
 
@@ -126,17 +126,18 @@ class ExpenseResponse(ExpensesBase):
 # --------------------------------------------
 
 class IncomeBase(BaseModel):
-    description: str = Field(..., max_length=50)
+    description: str = Field(..., max_length=100)
     amount: float = Field(..., gt=0)
 
 
 class CreateIncome(IncomeBase):
+    amount: float = Field(..., gt=0, le=50000)
     pass
 
 
 class UpdateIncome(BaseModel):
     description: Optional[str] = Field(default=None, max_length=100)
-    amount: Optional[float] = Field(default=None, gt=0)
+    amount: Optional[float] = Field(default=None, gt=0, le=50000)
 
 
 class IncomeResponse(IncomeBase):

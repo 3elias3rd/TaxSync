@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from models import get_db
 from auth import get_current_user
 from models import Expense, User
-from dependencies import require_manager, check_same_company, require_admin
+from dependencies import require_manager, check_same_company, require_admin, block_demo_user
 from schemas import ExpenseCreate, ExpenseResponse
 from services.ai_services import get_category_id, get_nlp
 from spacy.language import Language
@@ -28,6 +28,7 @@ def get_expenses(
 def create_expense(
     expense_data: ExpenseCreate,
     current_user: User = Depends(get_current_user),
+    _: User = Depends(block_demo_user),
     nlp: Language = Depends(get_nlp),
     db: Session = Depends(get_db)
 ):
@@ -51,7 +52,12 @@ def create_expense(
 
 # Only managers and admin can delete expenses
 @router.delete("/{expense_id}")
-def delete_expense(expense_id: int, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_expense(
+    expense_id: int,
+    current_user: User = Depends(require_admin),
+    _: User = Depends(block_demo_user),
+    db: Session = Depends(get_db)
+):
     
     expense = db.query(Expense).filter(Expense.id == expense_id).first()
 
@@ -75,6 +81,7 @@ def delete_expense(expense_id: int, current_user: User = Depends(require_admin),
 def approve_expense(
     expense_id: int,
     current_user: User = Depends(require_manager),
+    _: User = Depends(block_demo_user),
     db: Session = Depends(get_db)
 ):
     expense = db.query(Expense).filter(
