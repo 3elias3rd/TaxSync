@@ -17,3 +17,4 @@ passlib
 pytest
 pytest-asyncio 
 httpx
+slowapi

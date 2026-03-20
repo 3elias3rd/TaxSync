@@ -17,3 +17,11 @@ def require_admin(current_user: User = Depends(get_current_user)):
 def check_same_company(resource_company_id: int, current_user: User):
     if resource_company_id != current_user.company_id:
         raise HTTPException(status_code=403, detail="Access denied, resource belongs to a different company")
+    
+def block_demo_user(current_user: User = Depends(get_current_user)):
+    if current_user.username == "demo_employee":
+        raise HTTPException(
+            status_code=403,
+            detail="Demo accounts are read-only and cannot perform this action"
+        )
+    return current_user

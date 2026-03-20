@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from models import get_db
 from models import Income, User
-from dependencies import require_manager, check_same_company, require_admin
+from dependencies import require_manager, check_same_company, require_admin, block_demo_user
 from schemas import CreateIncome, IncomeResponse, PaginatedIncomeResponse
 from auth import get_current_user
 from math import ceil
@@ -38,6 +38,7 @@ def get_incomes(
 def create_income(
     income_data: CreateIncome,
     current_user: User = Depends(get_current_user),
+    _: User = Depends(block_demo_user),
     db: Session = Depends(get_db)
 ):
     
@@ -56,7 +57,12 @@ def create_income(
 
 # Only managers and admin can delete incomes
 @router.delete("/{income_id}")
-def delete_income(income_id: int, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_income(
+    income_id: int,
+    current_user: User = Depends(require_admin),
+    _: User = Depends(block_demo_user),
+    db: Session = Depends(get_db)
+):
     
     income = db.query(Income).filter(Income.id == income_id).first()
 
@@ -78,6 +84,7 @@ def delete_income(income_id: int, current_user: User = Depends(require_admin), d
 def approve_income(
     income_id: int,
     current_user: User = Depends(require_manager),
+    _: User = Depends(block_demo_user),
     db: Session = Depends(get_db)
 ):
     income = db.query(Income).filter(
