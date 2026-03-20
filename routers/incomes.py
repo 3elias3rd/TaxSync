@@ -1,23 +1,38 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from models import get_db
 from models import Income, User
 from dependencies import require_manager, check_same_company, require_admin
-from schemas import CreateIncome, IncomeResponse
+from schemas import CreateIncome, IncomeResponse, PaginatedIncomeResponse
 from auth import get_current_user
+from math import ceil
 
 router = APIRouter(prefix="/incomes", tags=["incomes"])
 
 
 # View incomes (any logged in user can access)
-@router.get("/", response_model=list[IncomeResponse])
+@router.get("/", response_model=PaginatedIncomeResponse)
 def get_incomes(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=50),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)    
 ):
-    incomes = db.query(Income).filter(Income.company_id == current_user.company_id).all()
+    # Base query scoped to company
+    query = db.query(Income).filter(Income.company_id == current_user.company_id)
 
-    return incomes
+    total = query.count()
+    skip = (page - 1) * page_size
+
+    incomes = query.order_by(Income.date.desc()).offset(skip).limit(page_size).all()
+
+    return PaginatedIncomeResponse.model_validate({
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": ceil(total / page_size) if total > 0 else 0,
+        "items": incomes
+        })
 
 @router.post("/", response_model=IncomeResponse)
 def create_income(

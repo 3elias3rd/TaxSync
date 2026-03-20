@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from fastapi import Request
 from models import get_db, Company, User, Expense, Income
 from auth import hash_password
-from services.ai_services import get_category_id, get_nlp
+from services.ai_services import get_category_id
 import random
 from seed_data import company_data, user_data, zereebcorp_expenses, zereebcorp_incomes, tilemllc_expenses, tilemllc_incomes, timule_expenses, timule_incomes
 from train import MODEL_DIR
@@ -58,7 +58,6 @@ def seed_users(db: Session):
 # Expense seeding
 # --------------------------------------------
 def seed_expenses(db: Session, company_name, expense_data):
-    random_date = date.today() - timedelta(days=random.randint(0, 365))
     company = db.query(Company).filter(Company.name == company_name).first()
     if not company:
         return
@@ -68,6 +67,7 @@ def seed_expenses(db: Session, company_name, expense_data):
         return
 
     for expense in expense_data:
+        random_date = date.today() - timedelta(days=random.randint(0, 365))
         exists = db.query(Expense).filter(
             Expense.description == expense["description"],
             Expense.company_id == company.id
@@ -90,7 +90,6 @@ def seed_expenses(db: Session, company_name, expense_data):
 # Income seeding
 # --------------------------------------------
 def seed_incomes(db: Session, company_name, incomes_data):
-    random_date = date.today() - timedelta(days=random.randint(0, 365))
     company = db.query(Company).filter(Company.name == company_name).first()
     if not company:
         return
@@ -100,6 +99,7 @@ def seed_incomes(db: Session, company_name, incomes_data):
         return
 
     for income in incomes_data:
+        random_date = date.today() - timedelta(days=random.randint(0, 365))
         exists = db.query(Income).filter(
             Income.description == income["description"],
             Income.company_id == company.id

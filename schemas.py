@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict, computed_field, field_validat
 from datetime import datetime, timezone
 from typing import Optional, List
 from models import RoleEnum
+from math import ceil
 
 # --------------------------------------------
 # User related models
@@ -106,19 +107,27 @@ class ExpenseUpdate(BaseModel):
 
 class ExpenseResponse(ExpensesBase):
     id: int
-    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     category: CategoryResponse
     company_id: int
     is_approved: bool
 
     model_config = ConfigDict(from_attributes=True)
 
+class PaginatedExpenseResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int 
+    total_pages: int 
+    items: List[ExpenseResponse]
 
-    @computed_field
-    @property
-    def get_deductible_amount(self) -> float:
+    model_config = ConfigDict(from_attributes=True)
+
+
+    # @computed_field
+    # @property
+    # def get_deductible_amount(self) -> float:
         
-        return round(self.category.deductible_pct * self.amount, 2)
+    #     return round(self.category.deductible_pct * self.amount, 2)
 
 
 # --------------------------------------------
@@ -126,11 +135,12 @@ class ExpenseResponse(ExpensesBase):
 # --------------------------------------------
 
 class IncomeBase(BaseModel):
-    description: str = Field(..., max_length=50)
+    description: str = Field(..., max_length=100)
     amount: float = Field(..., gt=0)
 
 
 class CreateIncome(IncomeBase):
+    amount: float = Field(..., gt=0, le=50000)
     pass
 
 
@@ -143,6 +153,15 @@ class IncomeResponse(IncomeBase):
     id: int
     company_id: int
     is_approved: bool
+    model_config = ConfigDict(from_attributes=True)
+
+class PaginatedIncomeResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    items: List[IncomeResponse]
+
     model_config = ConfigDict(from_attributes=True)
     
 

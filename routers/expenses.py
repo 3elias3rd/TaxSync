@@ -1,27 +1,45 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
 from models import get_db
 from auth import get_current_user
 from models import Expense, User
 from dependencies import require_manager, check_same_company, require_admin
-from schemas import ExpenseCreate, ExpenseResponse
+from schemas import ExpenseCreate, ExpenseResponse, PaginatedExpenseResponse, PaginatedIncomeResponse
 from services.ai_services import get_category_id, get_nlp
 from spacy.language import Language
+from math import ceil
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
 
 # View expenses (any logged in user can access)
-@router.get("/", response_model=list[ExpenseResponse])
+@router.get("/", response_model=PaginatedExpenseResponse)
 def get_expenses(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=50),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    expenses = db.query(Expense).filter(
-    Expense.company_id == current_user.company_id)\
-    .all()
+    
+    total = db.query(Expense).filter(Expense.company_id == current_user.company_id).count() # Total count of expenses
 
-    return expenses
+    skip = (page -1) * page_size # Calculate offset
+
+    expenses = db.query(Expense)\
+        .options(joinedload(Expense.category))\
+        .filter(Expense.company_id == current_user.company_id)\
+        .order_by(Expense.date.desc())\
+        .offset(skip)\
+        .limit(page_size)\
+        .all()
+
+    return PaginatedExpenseResponse.model_validate({
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": ceil(total/page_size) if total > 0 else 0,
+        "items": expenses
+    })
 
 # Create an expense (all users are authorized)
 @router.post("/", response_model=ExpenseResponse)
