@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict, computed_field, field_validator
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from models import RoleEnum
 from math import ceil
@@ -90,7 +90,7 @@ class ExpensesBase(BaseModel):
     def validate_date_not_future(cls, value):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
-        if value > datetime.now(timezone.utc):
+        if value > datetime.now(timezone.utc) + timedelta(minutes=5):
             raise ValueError("The date of the expense cannot be in the future")
         return value
 
@@ -112,6 +112,14 @@ class ExpenseResponse(ExpensesBase):
     is_approved: bool
 
     model_config = ConfigDict(from_attributes=True)
+    
+    @computed_field
+    @property
+    def get_deductible_amount(self) -> float:
+        if not self.category:
+            return 0.0
+        return round(self.category.deductible_pct * self.amount, 2)
+
 
 class PaginatedExpenseResponse(BaseModel):
     total: int
@@ -122,14 +130,6 @@ class PaginatedExpenseResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-    # @computed_field
-    # @property
-    # def get_deductible_amount(self) -> float:
-        
-    #     return round(self.category.deductible_pct * self.amount, 2)
-
-
 # --------------------------------------------
 # Income related models
 # --------------------------------------------
@@ -137,6 +137,16 @@ class PaginatedExpenseResponse(BaseModel):
 class IncomeBase(BaseModel):
     description: str = Field(..., max_length=100)
     amount: float = Field(..., gt=0)
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator('date')
+    @classmethod
+    def validate_date_not_future(cls, value):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        if value > datetime.now(timezone.utc) + timedelta(minutes=5):
+            raise ValueError("The date of the expense cannot be in the future")
+        return value
 
 
 class CreateIncome(IncomeBase):

@@ -7,7 +7,14 @@ class TestGetExpenses:
         headers  = auth_header()
         response = client.get("/expenses/", headers=headers)
         assert response.status_code == 200
-        assert isinstance(response.json(), list)
+
+        data = response.json()
+        assert "items" in data
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "total_pages" in data
+        assert isinstance(data["items"], list) # Items is the list
 
     def test_get_expenses_unauthenticated(self, client):
         response = client.get("/expenses/")

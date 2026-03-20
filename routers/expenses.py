@@ -57,6 +57,7 @@ def create_expense(
         description = expense_data.description,
         company_id = current_user.company_id,
         created_by = current_user.id,
+        date = expense_data.date,
         
         # Use spacy model to extract category id
         category_id = category_id

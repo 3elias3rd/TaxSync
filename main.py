@@ -11,6 +11,7 @@ from routers import expenses, incomes, users
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+import os
 
 from schemas import Report, UserRegister
 from train import MODEL_DIR
@@ -87,7 +88,7 @@ def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     )
 
 @app.post("/register")
-@limiter.limit("3/minute")
+@limiter.limit("3/minute" if os.getenv("TESTING") != "true" else "1000/minute")
 def register(
     request: Request,
     user_data: UserRegister,
@@ -114,7 +115,7 @@ def register(
     return {"message": f"User {new_user.username} registered successfully"}
 
 @app.post("/token")
-@limiter.limit("5/minute")
+@limiter.limit("5/minute" if os.getenv("TESTING") != "true" else "1000/minute")
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),

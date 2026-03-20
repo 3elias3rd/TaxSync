@@ -1,12 +1,16 @@
+import os
+os.environ["TESTING"] = "true"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from models import Base, get_db, RoleEnum
 from main import app
-import os
+
 from dotenv import load_dotenv
 from unittest.mock import MagicMock, patch
+from slowapi import Limiter
 from services.ai_services import get_nlp
 
 load_dotenv(".env")
