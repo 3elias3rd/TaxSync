@@ -22,7 +22,7 @@ A read-only demo account is available to explore the API:
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker)](https://docker.com)
 [![pytest](https://img.shields.io/badge/pytest-passing-green)](https://pytest.org)
 
-🔗 [Live API Docs](https://taxsync.onrender.com/docs#/) &nbsp;|&nbsp; 📺 [YouTube Demo](https://youtu.be/8bOVD1PNnQY)
+🔗 [Live API Docs](https://taxsync.onrender.com/docs#/) &nbsp;|&nbsp; 📺 [YouTube Demo](https://youtu.be/xygyveh-oXk)
 
 ---
 
