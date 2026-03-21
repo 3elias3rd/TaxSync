@@ -13,6 +13,7 @@ services:
     volumes:
       - ./migrations:/app/migrations # Mounts local migrations folder into container
       - ./tests:/app/tests
+      - ./htmlcov:/app/htmlcov
 
   db:
     image: ankane/pgvector:v0.5.1

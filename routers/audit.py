@@ -9,7 +9,7 @@ from typing import Optional
 router = APIRouter(prefix="/audit", tags=["audit"])
 
 
-router.get("/", response_model=PaginatedAuditLogResponse)
+@router.get("/", response_model=PaginatedAuditLogResponse)
 def get_audit_logs(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=50),
@@ -19,7 +19,7 @@ def get_audit_logs(
 ):
     query = db.query(AuditLog)\
     .filter(AuditLog.company_id == current_user.company_id)\
-    .order_by(AuditLog.timestamp.desc)
+    .order_by(AuditLog.timestamp.desc())
 
     if action:
         query = query.filter(AuditLog.action == action)

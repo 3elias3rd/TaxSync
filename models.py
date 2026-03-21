@@ -152,6 +152,6 @@ class AuditLog(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
 
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates="User")
-    company: Mapped["Company"] = relationship(back_populates="Company")
+    # # Relationships
+    # user: Mapped["User"] = relationship(back_populates="User")
+    # company: Mapped["Company"] = relationship(back_populates="Company")

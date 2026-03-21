@@ -69,9 +69,9 @@ class TestApproveExpense:
             "category_id": category.id
         })
 
-        expense        = db.query(Expense).first()
+        expense = db.query(Expense).first()
         manager_headers = auth_header(username="manager1", role=RoleEnum.manager)
-        response       = client.put(f"/expenses/{expense.id}/approve", headers=manager_headers)
+        response = client.put(f"/expenses/{expense.id}/approve", headers=manager_headers)
 
         assert response.status_code == 200          
         assert response.json()["is_approved"] == True
