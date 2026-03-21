@@ -124,3 +124,34 @@ class DocumentKnowledge(Base):
 
     # 1536 is the dimension for OpenAI text-embedding
     embedding: Mapped[Vector] = mapped_column(Vector(1536), nullable=False)
+
+
+class AuditActionEnum(str, enum.Enum):
+    # Expense actions
+    expense_created = "expense_created"
+    expense_deleted = "expense_deleted"
+    expense_approved = "expense_approved"
+
+    # Income actions
+    income_created = "income_created"
+    income_deleted = "income_deleted"
+    income_approved = "income_approved"
+
+    # Auth action
+    user_login = "user_login"
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    action: Mapped[AuditActionEnum] = mapped_column(SQLEnum(AuditActionEnum), nullable=False)
+    resource_id: Mapped[Optional[int]]
+    detail: Mapped[Optional[str]] = mapped_column(String(255))
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # Foreignkeys
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+
+    # Relationships
+    user: Mapped["User"] = relationship(back_populates="User")
+    company: Mapped["Company"] = relationship(back_populates="Company")

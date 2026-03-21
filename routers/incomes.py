@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from models import get_db
-from models import Income, User
+from models import Income, User, AuditActionEnum
 from dependencies import require_manager, check_same_company, require_admin, block_demo_user
 from schemas import CreateIncome, IncomeResponse, PaginatedIncomeResponse
 from auth import get_current_user
 from math import ceil
+
+from services.audit_services import log_action
+
 
 router = APIRouter(prefix="/incomes", tags=["incomes"])
 
@@ -50,9 +53,18 @@ def create_income(
     )
 
     db.add(new_income)
+    db.flush()
+
+    log_action(
+        db = db,
+        action = AuditActionEnum.income_created,
+        user = current_user,
+        resource_id = new_income.id,
+        detail = f"Created income: {new_income.description} -- AED {new_income.amount}"
+    )
+
     db.commit()
     db.refresh(new_income)
-
     return new_income
 
 # Only managers and admin can delete incomes
@@ -71,11 +83,16 @@ def delete_income(
     
     check_same_company(resource_company_id=income.company_id, current_user=current_user)
 
+    log_action(
+        db = db,
+        action = AuditActionEnum.income_deleted,
+        user = current_user,
+        resource_id = income_id,
+        detail = f"Deleted income: {income.description} -- AED {income.amount}"
+    )
+
     db.delete(income)
-
     db.commit()
-
-
     return {"message": f"Income {income_id} successfully deleted."}
 
 
@@ -99,7 +116,15 @@ def approve_income(
     )
     
     income.is_approved = True
+
+    log_action(
+        db = db,
+        action = AuditActionEnum.income_approved,
+        user = current_user,
+        resource_id = income_id,
+        detail = f"Approved income: {income.description} -- AED {income.amount}"
+    )
+
     db.commit()
     db.refresh(income)
-    
     return income

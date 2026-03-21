@@ -7,7 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from routers import expenses, incomes, users
+from routers import expenses, incomes, users, audit
 
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from models import get_db, User
 from services.tax_engine import calculate_corporate_tax
+from services.audit_services import AuditActionEnum, log_action
 from auth import verify_password, create_access_token, get_current_user, hash_password
 from services.ai_services import get_relevant_chunks, generate_answer
 from scripts.embeddings_to_db import set_law_to_db
@@ -71,6 +72,8 @@ A multi-tenant tax management API for UAE businesses.
 app.include_router(expenses.router)
 app.include_router(incomes.router)
 app.include_router(users.router )
+app.include_router(audit.router)
+
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -128,8 +131,15 @@ def login(
     if not user or not verify_password(form_data.password, user.hashed_pass):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
+    log_action(
+        db = db,
+        action = AuditActionEnum.user_login,
+        user = user,
+        detail = f"User {user.username} logged in."
+
+    )
+
     token = create_access_token(username=user.username)
-    
     return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/final_report", response_model=Report)

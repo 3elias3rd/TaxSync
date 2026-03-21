@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from models import get_db
 from auth import get_current_user
-from models import Expense, User
+from models import Expense, User, AuditActionEnum
 from dependencies import require_manager, check_same_company, require_admin, block_demo_user
 from schemas import ExpenseCreate, ExpenseResponse, PaginatedExpenseResponse
 from services.ai_services import get_category_id, get_nlp
+from services.audit_services import log_action
 from spacy.language import Language
 from math import ceil
 
@@ -64,6 +65,17 @@ def create_expense(
     )
 
     db.add(new_expense)
+    db.flush() # Flushed here to get expense object for use
+
+    # Log the action
+    log_action(
+        db = db,
+        action = AuditActionEnum.expense_created,
+        user = current_user,
+        resource_id = new_expense.id,
+        detail = f"Created expense: {new_expense.description} -- AED {new_expense.amount}"
+    )
+
     db.commit()
     db.refresh(new_expense)
 
@@ -88,10 +100,17 @@ def delete_expense(
         current_user=current_user
     )
 
+    # Log expense before deleting
+    log_action(
+        db = db,
+        action = AuditActionEnum.expense_deleted,
+        user = current_user,
+        resource_id = expense_id,
+        detail = f"Deleted expense: {expense.description} -- AED {expense.amount}" 
+    )
+
     db.delete(expense)
-
     db.commit()
-
 
     return {"message": f"Expense {expense_id} successfuly deleted."}
 
@@ -115,7 +134,15 @@ def approve_expense(
         )
     
     expense.is_approved = True
+
+    log_action(
+        db = db,
+        action = AuditActionEnum.expense_approved,
+        user = current_user,
+        resource_id = expense_id,
+        detail = f"Approved expense: {expense.description} -- AED {expense.amount}"
+    )
+    
     db.commit()
     db.refresh(expense)
-    
     return expense

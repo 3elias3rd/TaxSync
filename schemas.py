@@ -189,3 +189,25 @@ class Report(BaseModel):
     tax_free_allowance: float = 375000
     taxable_amount: float
     tax_payable: float
+
+
+class AuditLogResponse(BaseModel):
+    id: int
+    action: str
+    user_id: int
+    company_id: int
+    resource_id: Optional[int] = None
+    detail: Optional[str] = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedAuditLogResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+    items: List[AuditLogResponse]
+
+    model_config = ConfigDict(from_attributes=True)
