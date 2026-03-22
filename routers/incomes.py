@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi_cache import FastAPICache
+from fastapi_cache.decorator import cache
+
 from sqlalchemy.orm import Session
 from models import get_db
 from models import Income, User, AuditActionEnum
@@ -12,9 +15,12 @@ from services.audit_services import log_action
 
 router = APIRouter(prefix="/incomes", tags=["incomes"])
 
+async def invalidate_income_cache():
+    await FastAPICache.get_backend().clear(namespace="taxsync-cache")
 
 # View incomes (any logged in user can access)
 @router.get("/", response_model=PaginatedIncomeResponse)
+@cache(expire=60) # 1 Minute TTL
 def get_incomes(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=50),
@@ -38,7 +44,7 @@ def get_incomes(
         })
 
 @router.post("/", response_model=IncomeResponse)
-def create_income(
+async def create_income(
     income_data: CreateIncome,
     current_user: User = Depends(get_current_user),
     _: User = Depends(block_demo_user),
@@ -65,11 +71,13 @@ def create_income(
 
     db.commit()
     db.refresh(new_income)
+
+    await invalidate_income_cache()
     return new_income
 
 # Only managers and admin can delete incomes
 @router.delete("/{income_id}")
-def delete_income(
+async def delete_income(
     income_id: int,
     current_user: User = Depends(require_admin),
     _: User = Depends(block_demo_user),
@@ -93,12 +101,14 @@ def delete_income(
 
     db.delete(income)
     db.commit()
+
+    await invalidate_income_cache()
     return {"message": f"Income {income_id} successfully deleted."}
 
 
 # Only managers and admin can approve
 @router.put("/{income_id}/approve", response_model=IncomeResponse)
-def approve_income(
+async def approve_income(
     income_id: int,
     current_user: User = Depends(require_manager),
     _: User = Depends(block_demo_user),
@@ -127,4 +137,6 @@ def approve_income(
 
     db.commit()
     db.refresh(income)
+
+    await invalidate_income_cache()
     return income

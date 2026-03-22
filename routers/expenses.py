@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
+
 from sqlalchemy.orm import Session, joinedload
 from models import get_db
 from auth import get_current_user
@@ -15,6 +18,7 @@ router = APIRouter(prefix="/expenses", tags=["expenses"])
 
 # View expenses (any logged in user can access)
 @router.get("/", response_model=PaginatedExpenseResponse)
+@cache(expire=60) # 1 minute TTL
 def get_expenses(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=50),
@@ -42,9 +46,14 @@ def get_expenses(
         "items": expenses
     })
 
+# Clear expense cache
+async def invalidate_expense_cache():
+    await FastAPICache.get_backend().clear(namespace="taxsync-cache")
+
+
 # Create an expense (all users are authorized)
 @router.post("/", response_model=ExpenseResponse)
-def create_expense(
+async def create_expense(
     expense_data: ExpenseCreate,
     current_user: User = Depends(get_current_user),
     _: User = Depends(block_demo_user),
@@ -79,11 +88,12 @@ def create_expense(
     db.commit()
     db.refresh(new_expense)
 
+    await invalidate_expense_cache()
     return new_expense
 
 # Only managers and admin can delete expenses
 @router.delete("/{expense_id}")
-def delete_expense(
+async def delete_expense(
     expense_id: int,
     current_user: User = Depends(require_admin),
     _: User = Depends(block_demo_user),
@@ -112,11 +122,12 @@ def delete_expense(
     db.delete(expense)
     db.commit()
 
+    await invalidate_expense_cache()
     return {"message": f"Expense {expense_id} successfuly deleted."}
 
 # Only managers and admin can approve
 @router.put("/{expense_id}/approve", response_model=ExpenseResponse)
-def approve_expense(
+async def approve_expense(
     expense_id: int,
     current_user: User = Depends(require_manager),
     _: User = Depends(block_demo_user),
@@ -145,4 +156,8 @@ def approve_expense(
     
     db.commit()
     db.refresh(expense)
+
+    await invalidate_expense_cache()
     return expense
+
+

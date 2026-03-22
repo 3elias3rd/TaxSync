@@ -103,7 +103,7 @@ class TestApproveExpense:
         assert response.status_code == 200
         assert data["is_approved"] == True
     
-    def test_approve_expense_as_employee_forbidden(self, client, auth_header, db):
+    def test_approve_income_as_employee_forbidden(self, client, auth_header, db):
         from models import Income
 
         employee_headers = auth_header(username="employee1", role=RoleEnum.employee)
@@ -112,8 +112,9 @@ class TestApproveExpense:
             "amount": 45000
         })
 
-        income = db.query(Income).first()
+        income = db.query(Income).filter(Income.description == "February income").first()
 
-        response = client.put(f"/incomes/{income.id}/approved", headers=employee_headers)
+        response = client.put(f"/incomes/{income.id}/approve", headers=employee_headers)
 
+        assert income is not None
         assert response.status_code == 403

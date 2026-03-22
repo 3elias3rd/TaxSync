@@ -52,7 +52,7 @@ class User(Base):
     trn_number: Mapped[Optional[str]] = mapped_column(String(15), unique=True)
     
     # Foreign key
-    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"))
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), index=True)
     role: Mapped[RoleEnum] = mapped_column(SQLEnum(RoleEnum), nullable=False)
 
     # Relationships
@@ -66,12 +66,12 @@ class Expense(Base):
     description: Mapped[str] = mapped_column(String(100))
     amount: Mapped[float]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
     # Foreign keys
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"))
-    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), index=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), index=True)
 
     # Relationships
     company: Mapped["Company"] = relationship(back_populates="expenses")
@@ -95,11 +95,11 @@ class Income(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     description: Mapped[str] = mapped_column(String(100))
     amount: Mapped[float]
-    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
     # Foreign keys
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"))
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), index=True)
     
     # Relationship
     created_by_user: Mapped["User"] = relationship(back_populates="incomes")
@@ -143,14 +143,14 @@ class AuditActionEnum(str, enum.Enum):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id: Mapped[int] = mapped_column(primary_key=True)
-    action: Mapped[AuditActionEnum] = mapped_column(SQLEnum(AuditActionEnum), nullable=False)
+    action: Mapped[AuditActionEnum] = mapped_column(SQLEnum(AuditActionEnum), nullable=False, index=True)
     resource_id: Mapped[Optional[int]]
     detail: Mapped[Optional[str]] = mapped_column(String(255))
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     # Foreignkeys
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
 
     # # Relationships
     # user: Mapped["User"] = relationship(back_populates="User")

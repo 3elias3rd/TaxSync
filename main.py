@@ -2,6 +2,11 @@ from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from fastapi_cache.decorator import cache
+
+from redis import asyncio as aioredis
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -36,6 +41,15 @@ async def lifespan(app: FastAPI):
         # Load the model from disk
         app.state.nlp = spacy.load(MODEL_DIR)
         app.state.limiter = limiter
+
+        # Initialize Redis cache
+        redis = aioredis.from_url(
+            os.getenv("REDISURL", "redis://redis:6379"),
+            encoding="utf8",
+            decode_responses = True
+        )
+        FastAPICache.init(RedisBackend(redis), prefix="taxsync-cache")
+        print("Redis cache initialised")
     
     except Exception as e:
         print(f"Failed to load model: {e}")
@@ -117,8 +131,12 @@ def register(
     
     return {"message": f"User {new_user.username} registered successfully"}
 
+limit = "5/minute"
+if os.getenv("TESTING") == "true" or os.getenv("LOAD_TESTING") == "true":
+    limit = "1000/minute"
+
 @app.post("/token")
-@limiter.limit("5/minute" if os.getenv("TESTING") != "true" else "1000/minute")
+@limiter.limit(limit)
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -143,6 +161,7 @@ def login(
     return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/final_report", response_model=Report)
+@cache(expire=1800) # 30 minute TTL
 def get_report(
     year: int = 2026,
     current_user: User = Depends(get_current_user),
