@@ -2,12 +2,17 @@ from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from fastapi_cache.decorator import cache
+
+from redis import asyncio as aioredis
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from routers import expenses, incomes, users
+from routers import expenses, incomes, users, audit
 
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -21,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from models import get_db, User
 from services.tax_engine import calculate_corporate_tax
+from services.audit_services import AuditActionEnum, log_action
 from auth import verify_password, create_access_token, get_current_user, hash_password
 from services.ai_services import get_relevant_chunks, generate_answer
 from scripts.embeddings_to_db import set_law_to_db
@@ -35,6 +41,15 @@ async def lifespan(app: FastAPI):
         # Load the model from disk
         app.state.nlp = spacy.load(MODEL_DIR)
         app.state.limiter = limiter
+
+        # Initialize Redis cache
+        redis = aioredis.from_url(
+            os.getenv("REDISURL", "redis://redis:6379"),
+            encoding="utf8",
+            decode_responses = True
+        )
+        FastAPICache.init(RedisBackend(redis), prefix="taxsync-cache")
+        print("Redis cache initialised")
     
     except Exception as e:
         print(f"Failed to load model: {e}")
@@ -71,6 +86,8 @@ A multi-tenant tax management API for UAE businesses.
 app.include_router(expenses.router)
 app.include_router(incomes.router)
 app.include_router(users.router )
+app.include_router(audit.router)
+
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -114,8 +131,12 @@ def register(
     
     return {"message": f"User {new_user.username} registered successfully"}
 
+limit = "5/minute"
+if os.getenv("TESTING") == "true" or os.getenv("LOAD_TESTING") == "true":
+    limit = "1000/minute"
+
 @app.post("/token")
-@limiter.limit("5/minute" if os.getenv("TESTING") != "true" else "1000/minute")
+@limiter.limit(limit)
 def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -128,11 +149,19 @@ def login(
     if not user or not verify_password(form_data.password, user.hashed_pass):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
+    log_action(
+        db = db,
+        action = AuditActionEnum.user_login,
+        user = user,
+        detail = f"User {user.username} logged in."
+
+    )
+
     token = create_access_token(username=user.username)
-    
     return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/final_report", response_model=Report)
+@cache(expire=1800) # 30 minute TTL
 def get_report(
     year: int = 2026,
     current_user: User = Depends(get_current_user),

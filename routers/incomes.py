@@ -1,17 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi_cache import FastAPICache
+from fastapi_cache.decorator import cache
+
 from sqlalchemy.orm import Session
 from models import get_db
-from models import Income, User
+from models import Income, User, AuditActionEnum
 from dependencies import require_manager, check_same_company, require_admin, block_demo_user
 from schemas import CreateIncome, IncomeResponse, PaginatedIncomeResponse
 from auth import get_current_user
 from math import ceil
 
+from services.audit_services import log_action
+
+
 router = APIRouter(prefix="/incomes", tags=["incomes"])
 
+async def invalidate_income_cache():
+    await FastAPICache.get_backend().clear(namespace="taxsync-cache")
 
 # View incomes (any logged in user can access)
 @router.get("/", response_model=PaginatedIncomeResponse)
+@cache(expire=60) # 1 Minute TTL
 def get_incomes(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=50),
@@ -35,7 +44,7 @@ def get_incomes(
         })
 
 @router.post("/", response_model=IncomeResponse)
-def create_income(
+async def create_income(
     income_data: CreateIncome,
     current_user: User = Depends(get_current_user),
     _: User = Depends(block_demo_user),
@@ -50,14 +59,25 @@ def create_income(
     )
 
     db.add(new_income)
+    db.flush()
+
+    log_action(
+        db = db,
+        action = AuditActionEnum.income_created,
+        user = current_user,
+        resource_id = new_income.id,
+        detail = f"Created income: {new_income.description} -- AED {new_income.amount}"
+    )
+
     db.commit()
     db.refresh(new_income)
 
+    await invalidate_income_cache()
     return new_income
 
 # Only managers and admin can delete incomes
 @router.delete("/{income_id}")
-def delete_income(
+async def delete_income(
     income_id: int,
     current_user: User = Depends(require_admin),
     _: User = Depends(block_demo_user),
@@ -71,17 +91,24 @@ def delete_income(
     
     check_same_company(resource_company_id=income.company_id, current_user=current_user)
 
-    db.delete(income)
+    log_action(
+        db = db,
+        action = AuditActionEnum.income_deleted,
+        user = current_user,
+        resource_id = income_id,
+        detail = f"Deleted income: {income.description} -- AED {income.amount}"
+    )
 
+    db.delete(income)
     db.commit()
 
-
+    await invalidate_income_cache()
     return {"message": f"Income {income_id} successfully deleted."}
 
 
 # Only managers and admin can approve
 @router.put("/{income_id}/approve", response_model=IncomeResponse)
-def approve_income(
+async def approve_income(
     income_id: int,
     current_user: User = Depends(require_manager),
     _: User = Depends(block_demo_user),
@@ -99,7 +126,17 @@ def approve_income(
     )
     
     income.is_approved = True
+
+    log_action(
+        db = db,
+        action = AuditActionEnum.income_approved,
+        user = current_user,
+        resource_id = income_id,
+        detail = f"Approved income: {income.description} -- AED {income.amount}"
+    )
+
     db.commit()
     db.refresh(income)
-    
+
+    await invalidate_income_cache()
     return income

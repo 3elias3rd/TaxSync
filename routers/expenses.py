@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
+
 from sqlalchemy.orm import Session, joinedload
 from models import get_db
 from auth import get_current_user
-from models import Expense, User
+from models import Expense, User, AuditActionEnum
 from dependencies import require_manager, check_same_company, require_admin, block_demo_user
 from schemas import ExpenseCreate, ExpenseResponse, PaginatedExpenseResponse
 from services.ai_services import get_category_id, get_nlp
+from services.audit_services import log_action
 from spacy.language import Language
 from math import ceil
 
@@ -14,6 +18,7 @@ router = APIRouter(prefix="/expenses", tags=["expenses"])
 
 # View expenses (any logged in user can access)
 @router.get("/", response_model=PaginatedExpenseResponse)
+@cache(expire=60) # 1 minute TTL
 def get_expenses(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=50),
@@ -41,9 +46,14 @@ def get_expenses(
         "items": expenses
     })
 
+# Clear expense cache
+async def invalidate_expense_cache():
+    await FastAPICache.get_backend().clear(namespace="taxsync-cache")
+
+
 # Create an expense (all users are authorized)
 @router.post("/", response_model=ExpenseResponse)
-def create_expense(
+async def create_expense(
     expense_data: ExpenseCreate,
     current_user: User = Depends(get_current_user),
     _: User = Depends(block_demo_user),
@@ -64,14 +74,26 @@ def create_expense(
     )
 
     db.add(new_expense)
+    db.flush() # Flushed here to get expense object for use
+
+    # Log the action
+    log_action(
+        db = db,
+        action = AuditActionEnum.expense_created,
+        user = current_user,
+        resource_id = new_expense.id,
+        detail = f"Created expense: {new_expense.description} -- AED {new_expense.amount}"
+    )
+
     db.commit()
     db.refresh(new_expense)
 
+    await invalidate_expense_cache()
     return new_expense
 
 # Only managers and admin can delete expenses
 @router.delete("/{expense_id}")
-def delete_expense(
+async def delete_expense(
     expense_id: int,
     current_user: User = Depends(require_admin),
     _: User = Depends(block_demo_user),
@@ -88,16 +110,24 @@ def delete_expense(
         current_user=current_user
     )
 
-    db.delete(expense)
+    # Log expense before deleting
+    log_action(
+        db = db,
+        action = AuditActionEnum.expense_deleted,
+        user = current_user,
+        resource_id = expense_id,
+        detail = f"Deleted expense: {expense.description} -- AED {expense.amount}" 
+    )
 
+    db.delete(expense)
     db.commit()
 
-
+    await invalidate_expense_cache()
     return {"message": f"Expense {expense_id} successfuly deleted."}
 
 # Only managers and admin can approve
 @router.put("/{expense_id}/approve", response_model=ExpenseResponse)
-def approve_expense(
+async def approve_expense(
     expense_id: int,
     current_user: User = Depends(require_manager),
     _: User = Depends(block_demo_user),
@@ -115,7 +145,19 @@ def approve_expense(
         )
     
     expense.is_approved = True
+
+    log_action(
+        db = db,
+        action = AuditActionEnum.expense_approved,
+        user = current_user,
+        resource_id = expense_id,
+        detail = f"Approved expense: {expense.description} -- AED {expense.amount}"
+    )
+    
     db.commit()
     db.refresh(expense)
-    
+
+    await invalidate_expense_cache()
     return expense
+
+

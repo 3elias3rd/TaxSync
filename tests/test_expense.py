@@ -69,9 +69,9 @@ class TestApproveExpense:
             "category_id": category.id
         })
 
-        expense        = db.query(Expense).first()
+        expense = db.query(Expense).first()
         manager_headers = auth_header(username="manager1", role=RoleEnum.manager)
-        response       = client.put(f"/expenses/{expense.id}/approve", headers=manager_headers)
+        response = client.put(f"/expenses/{expense.id}/approve", headers=manager_headers)
 
         assert response.status_code == 200          
         assert response.json()["is_approved"] == True
@@ -82,14 +82,14 @@ class TestApproveExpense:
         db.add(category)
         db.commit()
 
-        employee_headers = auth_header(username="employee2", role=RoleEnum.employee)
-        client.post("/expenses/", headers=employee_headers, json={   
+        employee_headers = auth_header(username="employee1", role=RoleEnum.employee)
+        client.post("/expenses/", headers=employee_headers, json={
             "description": "Flight",
             "amount":      200.00,
             "category_id": category.id
         })
 
-        expense  = db.query(Expense).first()
-        response = client.put(f"/expenses/{expense.id}/approve", headers=employee_headers)  
+        expense = db.query(Expense).filter(Expense.description == "Flight").first()
+        response = client.put(f"/expenses/{expense.id}/approve", headers=employee_headers)
 
         assert response.status_code == 403

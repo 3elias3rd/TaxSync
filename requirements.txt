@@ -18,3 +18,7 @@ pytest
 pytest-asyncio 
 httpx
 slowapi
+pytest-cov
+locust
+redis
+fastapi-cache2[redis]

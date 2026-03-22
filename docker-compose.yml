@@ -6,6 +6,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env 
     environment:
@@ -13,6 +15,7 @@ services:
     volumes:
       - ./migrations:/app/migrations # Mounts local migrations folder into container
       - ./tests:/app/tests
+      - ./htmlcov:/app/htmlcov
 
   db:
     image: ankane/pgvector:v0.5.1
@@ -47,6 +50,18 @@ services:
       interval: 5s
       timeout: 35s
       retries: 5
+  
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      
 
 volumes:
   postgres_data:

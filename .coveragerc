@@ -1,0 +1,16 @@
+# .coveragerc
+[run]
+omit =
+    tests/*
+    scripts/*
+    migrations/*
+    */__init__.py
+    seed_data.py
+    train.py
+    categories_to_db.py
+    training_data
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
