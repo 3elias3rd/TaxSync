@@ -43,7 +43,7 @@ Use the demo credentials below to authenticate.
 | Field    | Value           |
 |----------|-----------------|
 | username | demo_employee   |
-| password | TaxSync2026!    |
+| password | demopass        |
 | role     | employee        |
 
 > Note: The demo account can view expenses, incomes and tax reports
