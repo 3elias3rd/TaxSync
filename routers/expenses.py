@@ -10,6 +10,10 @@ from dependencies import require_manager, check_same_company, require_admin, blo
 from schemas import ExpenseCreate, ExpenseResponse, PaginatedExpenseResponse
 from services.ai_services import get_category_id, get_nlp
 from services.audit_services import log_action
+
+from tasks.expense_tasks import categorise_expense
+from tasks.audit_tasks import process_audit_log
+
 from spacy.language import Language
 from math import ceil
 
@@ -60,33 +64,34 @@ async def create_expense(
     nlp: Language = Depends(get_nlp),
     db: Session = Depends(get_db)
 ):
-    category_id = expense_data.category_id or get_category_id(expense_data.description, nlp, db)
-
     new_expense = Expense(
         amount = expense_data.amount,
         description = expense_data.description,
         company_id = current_user.company_id,
+        category_id = expense_data.category_id, # May be none
         created_by = current_user.id,
         date = expense_data.date,
         
         # Use spacy model to extract category id
-        category_id = category_id
+        
     )
 
     db.add(new_expense)
-    db.flush() # Flushed here to get expense object for use
+    db.commit()
+    db.refresh(new_expense)
 
-    # Log the action
-    log_action(
-        db = db,
-        action = AuditActionEnum.expense_created,
-        user = current_user,
+    # Dispatch categorisation a background task if not provided
+    if not expense_data.category_id:
+        categorise_expense.delay(new_expense.id) # Fire and forget
+
+    # Dispatch logging to background
+    process_audit_log.delay(
+        action = "expense_created",
+        user_id = current_user.id,
+        company_id = current_user.company_id,
         resource_id = new_expense.id,
         detail = f"Created expense: {new_expense.description} -- AED {new_expense.amount}"
     )
-
-    db.commit()
-    db.refresh(new_expense)
 
     await invalidate_expense_cache()
     return new_expense

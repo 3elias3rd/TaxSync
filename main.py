@@ -21,8 +21,8 @@ import os
 from schemas import Report, UserRegister
 from train import MODEL_DIR
 from scripts.seed_categories import seed_categories
-
 from sqlalchemy.orm import Session
+from tasks.audit_tasks import process_audit_log
 
 from models import get_db, User
 from services.tax_engine import calculate_corporate_tax
@@ -149,12 +149,11 @@ def login(
     if not user or not verify_password(form_data.password, user.hashed_pass):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
-    log_action(
-        db = db,
-        action = AuditActionEnum.user_login,
-        user = user,
-        detail = f"User {user.username} logged in."
-
+    process_audit_log(
+        action = "user_login",
+        user_id = user.id,
+        company_id = user.company_id,
+        detail = f"User {user.username} logged in"
     )
 
     token = create_access_token(username=user.username)

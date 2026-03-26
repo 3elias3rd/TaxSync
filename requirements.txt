@@ -22,3 +22,4 @@ pytest-cov
 locust
 redis
 fastapi-cache2[redis]
+celery[redis]

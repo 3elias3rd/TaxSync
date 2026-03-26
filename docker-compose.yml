@@ -13,9 +13,37 @@ services:
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
     volumes:
-      - ./migrations:/app/migrations # Mounts local migrations folder into container
+      - ./migrations:/app/migrations
       - ./tests:/app/tests
       - ./htmlcov:/app/htmlcov
+
+  celery_worker:
+    build: .
+    command: celery -A celery_app worker --loglevel=info
+    depends_on:
+      db:                              # ✅ fixed — no dash, mapping syntax
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - REDIS_URL=redis://redis:6379
+
+  celery_beat:
+    build: .
+    command: celery -A celery_app beat --loglevel=info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - REDIS_URL=redis://redis:6379
 
   db:
     image: ankane/pgvector:v0.5.1
@@ -36,7 +64,7 @@ services:
       timeout: 35s
       retries: 5
 
-  db_test: # separate database for running tests
+  db_test:
     image: ankane/pgvector:v0.5.1
     restart: always
     environment:
@@ -44,13 +72,13 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: test_db
     ports:
-      - "5434:5432" #  different port to avoid conflict with main db
+      - "5434:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 5s
       timeout: 35s
       retries: 5
-  
+
   redis:
     image: redis:7-alpine
     restart: always
@@ -61,7 +89,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      
 
 volumes:
   postgres_data:
