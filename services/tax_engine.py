@@ -14,7 +14,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("Database Url not found in .env")
 
-
 def calculate_corporate_tax(year, company_id: int, db: Session) -> Report:
 
     total_revenue = 0.0

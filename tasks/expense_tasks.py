@@ -5,8 +5,8 @@ from models import Expense, Category
 from services.ai_services import get_category_id
 import spacy
 import os
-from train import MODEL_DIR
 from dotenv import load_dotenv
+from train import MODEL_DIR
 
 load_dotenv(".env")
 
@@ -17,7 +17,7 @@ SessionLocal = sessionmaker(bind=engine)
 def categorise_expense(self, expense_id: int):
     """
     Runs spaCy categorisation on an expense in the background.
-    Called after expense is created so user doesn't wait for inference.
+    Called after expense is created so the user doesn't wait for inference.
     """
     db = SessionLocal()
     nlp = spacy.load(MODEL_DIR)
@@ -26,22 +26,21 @@ def categorise_expense(self, expense_id: int):
         expense = db.query(Expense).filter(Expense.id == expense_id).first()
         if not expense:
             return {"status": "error", "detail": f"Expense {expense_id} not found."}
-        
+
         category_id = get_category_id(
-            text = expense.description,
-            nlp =  nlp,
-            db = db
+            text=expense.description,
+            nlp=nlp,
+            db=db,
         )
 
         expense.category_id = category_id
         db.commit()
 
         return {"status": "success", "expense_id": expense_id, "category_id": category_id}
-    
+
     except Exception as exc:
         db.rollback()
-        # Retry up to 3 times with exponential backoff
         raise self.retry(exc=exc, countdown=2 ** self.request.retries)
-    
+
     finally:
         db.close()
